@@ -1,0 +1,18 @@
+# Ignorar archivos compilados de Java
+*.class
+
+# Ignorar archivos empaquetados
+*.jar
+*.war
+
+# Carpetas de compilación comunes
+bin/
+out/
+target/
+
+# Archivos de configuración de IDE (opcional)
+.project
+.classpath
+.settings/
+.vscode/
+.idea/
