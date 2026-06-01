@@ -16,3 +16,7 @@ target/
 .settings/
 .vscode/
 .idea/
+
+venv/
+__pycache__
+.venv/
