@@ -1,0 +1,7 @@
+Terminal 1, para levantar el servicio SOAP:
+mvn --% -Dexec.mainClass=com.example.Publicador exec:java
+
+Espera a ver el mensaje de servicio activo y deja esa terminal abierta.
+
+Terminal 2, para consumir el servicio:
+mvn --% -Dexec.mainClass=com.example.ClienteSOAP exec:java

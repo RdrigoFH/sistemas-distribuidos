@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestion de Productos</title>
+    <style>
+        body { font-family: Arial, sans-serif; background: #f4f4f4; padding: 30px; }
+        .contenedor { max-width: 700px; margin: auto; background: white; padding: 25px; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+        .seccion { margin-bottom: 30px; padding: 15px; border-radius: 8px; background: #fafafa; border: 1px solid #eee; }
+        h1 { text-align: center; color: #333; }
+        h2 { font-size: 1.2rem; margin-top: 0; color: #555; }
+        
+        /* Contenedor de dos columnas */
+        .columnas {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        .columnas input {
+            flex: 1; /* Hace que ambos inputs crezcan igual */
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            margin-bottom: 0; /* Quitamos el margen inferior para alinearlos bien */
+        }
+
+        button { padding: 10px 15px; border: none; background: #2d89ef; color: white; cursor: pointer; border-radius: 4px; font-weight: bold; width: 100%; }
+        button:hover { background: #1b5fbf; }
+        
+        #seccion-editar { display: none; background: #fff3cd; border-color: #ffeeba; }
+        .btn-cancelar { background: #6c757d; width: auto; margin-top: 10px; }
+        .btn-edit { background: #ffc107; color: black; width: auto; }
+        .eliminar { background: #d9534f; width: auto; }
+        
+        ul { list-style: none; padding: 0; }
+        li { background: white; margin-bottom: 8px; padding: 12px; border-radius: 4px; display: flex; justify-content: space-between; align-items: center; border: 1px solid #ddd; }
+        .mensaje { text-align: center; font-weight: bold; height: 20px; color: #2d89ef; }
+        .acciones { display: flex; gap: 5px; }
+    </style>
+</head>
+<body>
+
+    <div class="contenedor">
+        <h1>Gestion de Productos</h1>
+        <p class="mensaje" id="mensaje"></p>
+
+        <div class="seccion">
+            <h2>Agregar Nuevo Producto</h2>
+            <div class="columnas">
+                <input type="number" id="idProducto" placeholder="ID">
+                <input type="text" id="nombreProducto" placeholder="Nombre del producto">
+            </div>
+            <button onclick="agregar()">Agregar al Inventario</button>
+        </div>
+
+        <div class="seccion" id="seccion-editar">
+            <h2>Actualizar Producto</h2>
+            <div class="columnas">
+                <input type="number" id="idActualizar" readonly style="background: #e9ecef;">
+                <input type="text" id="nombreActualizar" placeholder="Nuevo nombre">
+            </div>
+            <button style="background: #28a745;" onclick="actualizar()">Guardar Cambios</button>
+            <button class="btn-cancelar" onclick="cerrarEdicion()">Cancelar</button>
+        </div>
+
+        <div class="seccion" style="background: transparent; border: none;">
+            <h2>Productos en Inventario</h2>
+            <ul id="lista"></ul>
+        </div>
+    </div>
+
+    <script>
+        const URL = "http://127.0.0.1:5000/productos";
+
+        async function listar() {
+            let respuesta = await fetch(URL);
+            let datos = await respuesta.json();
+            let lista = document.getElementById("lista");
+            lista.innerHTML = "";
+
+            datos.forEach(p => {
+                lista.innerHTML += `
+                    <li>
+                        <span><strong>ID: ${p.id}</strong> - ${p.nombre}</span>
+                        <div class="acciones">
+                            <button class="btn-edit" onclick="prepararEdicion(${p.id}, '${p.nombre}')">Editar</button>
+                            <button class="eliminar" onclick="eliminarDirecto(${p.id})">Eliminar</button>
+                        </div>
+                    </li>
+                `;
+            });
+        }
+
+        async function agregar() {
+            let id = document.getElementById("idProducto").value;
+            let nombre = document.getElementById("nombreProducto").value;
+
+            if (!id || !nombre) { mostrarMensaje("Complete los campos"); return; }
+
+            let respuesta = await fetch(URL, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ id: parseInt(id), nombre: nombre })
+            });
+
+            if(respuesta.ok) {
+                mostrarMensaje("Producto agregado");
+                listar();
+                document.getElementById("idProducto").value = "";
+                document.getElementById("nombreProducto").value = "";
+            }
+        }
+
+        function prepararEdicion(id, nombre) {
+            document.getElementById("seccion-editar").style.display = "block";
+            document.getElementById("idActualizar").value = id;
+            document.getElementById("nombreActualizar").value = nombre;
+            window.scrollTo(0, 0);
+        }
+
+        function cerrarEdicion() {
+            document.getElementById("seccion-editar").style.display = "none";
+        }
+
+        async function actualizar() {
+            let id = document.getElementById("idActualizar").value;
+            let nombre = document.getElementById("nombreActualizar").value;
+
+            let respuesta = await fetch(`${URL}/${id}`, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ nombre: nombre })
+            });
+
+            if(respuesta.ok) {
+                mostrarMensaje("Producto actualizado");
+                cerrarEdicion();
+                listar();
+            }
+        }
+
+        async function eliminarDirecto(id) {
+            if(!confirm("Desea eliminar este producto?")) return;
+            let respuesta = await fetch(`${URL}/${id}`, { method: "DELETE" });
+            if(respuesta.ok) {
+                mostrarMensaje("Producto eliminado");
+                listar();
+            }
+        }
+
+        function mostrarMensaje(texto) {
+            const m = document.getElementById("mensaje");
+            m.innerText = texto;
+            setTimeout(() => m.innerText = "", 3000);
+        }
+
+        listar();
+    </script>
+</body>
+</html>
