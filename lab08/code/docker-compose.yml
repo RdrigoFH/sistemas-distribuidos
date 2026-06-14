@@ -1,0 +1,41 @@
+services:
+  pg-arequipa:
+    image: postgres:16
+    container_name: pg-arequipa
+    environment:
+      POSTGRES_USER: banco
+      POSTGRES_PASSWORD: banco123
+      POSTGRES_DB: banco_arequipa
+    ports:
+      - "5431:5432"
+    networks:
+      - red-bancaria
+
+  pg-cusco:
+    image: postgres:16
+    container_name: pg-cusco
+    environment:
+      POSTGRES_USER: banco
+
+      POSTGRES_PASSWORD: banco123
+      POSTGRES_DB: banco_cusco
+    ports:
+      - "5433:5432"
+    networks:
+      - red-bancaria
+
+  pg-trujillo:
+    image: postgres:16
+    container_name: pg-trujillo
+    environment:
+      POSTGRES_USER: banco
+      POSTGRES_PASSWORD: banco123
+      POSTGRES_DB: banco_trujillo
+    ports:
+      - "5434:5432"
+    networks:
+      - red-bancaria
+
+networks:
+  red-bancaria:
+    driver: bridge
