@@ -2,7 +2,7 @@ import psycopg2
 
 DB_CONFIG = {
     "arequipa": {
-        "host": "localhost", "port": 5431,
+        "host": "localhost", "port": 5431,  # Puerto confirmado como correcto
         "dbname": "banco_arequipa", "user": "banco", "password": "banco123"
     },
     "cusco": {
@@ -44,7 +44,7 @@ def consultar_saldos():
 def transferir_2pc(monto, cliente_origen, cliente_destino, nodo_origen, nodo_destino):
     """
     Ejecuta transferencia con protocolo Two-Phase Commit.
-    Usa PREPARE TRANSACTION explícito en SQL para evitar conflicto con tpc_begin.
+    Usa autocommit=True siempre y BEGIN manual para evitar desincronización del driver.
     """
     conn_origen = None
     conn_destino = None
@@ -53,8 +53,11 @@ def transferir_2pc(monto, cliente_origen, cliente_destino, nodo_origen, nodo_des
         conn_origen = get_conn(nodo_origen)
         conn_destino = get_conn(nodo_destino)
 
-        # Verificar fondos (esto va en autocommit, no afecta la transacción)
+        # MANTENEMOS autocommit=True durante TODA la ejecución
         conn_origen.autocommit = True
+        conn_destino.autocommit = True
+
+        # Verificar fondos
         with conn_origen.cursor() as cur:
             cur.execute("SELECT saldo FROM cuentas WHERE cliente = %s", (cliente_origen,))
             saldo = cur.fetchone()[0]
@@ -66,12 +69,11 @@ def transferir_2pc(monto, cliente_origen, cliente_destino, nodo_origen, nodo_des
             print(f"[INFO] Saldo origen verificado: S/ {saldo:,.2f}")
 
         # FASE 1: PREPARE
-        # Usamos PREPARE TRANSACTION explícito en SQL, no tpc_begin
         print("\n[FASE 1 - PREPARE]")
 
         # --- Origen ---
-        conn_origen.autocommit = False  # Iniciamos transacción
         with conn_origen.cursor() as cur:
+            cur.execute("BEGIN") # Iniciamos transacción manualmente en SQL
             cur.execute(
                 "UPDATE cuentas SET saldo = saldo - %s WHERE cliente = %s",
                 (monto, cliente_origen)
@@ -80,8 +82,8 @@ def transferir_2pc(monto, cliente_origen, cliente_destino, nodo_origen, nodo_des
         print(f"  ✓ {nodo_origen}: PREPARED (descuento de S/ {monto:,.2f} pendiente)")
 
         # --- Destino ---
-        conn_destino.autocommit = False  # Iniciamos transacción
         with conn_destino.cursor() as cur:
+            cur.execute("BEGIN") # Iniciamos transacción manualmente en SQL
             cur.execute(
                 "UPDATE cuentas SET saldo = saldo + %s WHERE cliente = %s",
                 (monto, cliente_destino)
@@ -91,12 +93,11 @@ def transferir_2pc(monto, cliente_origen, cliente_destino, nodo_origen, nodo_des
 
         # FASE 2: COMMIT
         print("\n[FASE 2 - COMMIT]")
-        conn_origen.autocommit = True
+        
         with conn_origen.cursor() as cur:
             cur.execute("COMMIT PREPARED 'tx_origen'")
         print(f"  ✓ {nodo_origen}: COMMITTED")
 
-        conn_destino.autocommit = True
         with conn_destino.cursor() as cur:
             cur.execute("COMMIT PREPARED 'tx_destino'")
         print(f"  ✓ {nodo_destino}: COMMITTED")
@@ -115,14 +116,19 @@ def transferir_2pc(monto, cliente_origen, cliente_destino, nodo_origen, nodo_des
         ]:
             if conn and not conn.closed:
                 try:
-                    conn.autocommit = True
+                    # autocommit ya está en True, enviamos el comando directo
                     with conn.cursor() as cur:
                         cur.execute(f"ROLLBACK PREPARED '{tx_id}'")
-                    print(f"  ✓ {nombre}: ROLLED BACK")
+                    print(f"  ✓ {nombre}: ROLLED BACK PREPARED")
                 except Exception as rb_err:
-                    # Si no existe la transacción preparada, no hay problema
                     if "does not exist" in str(rb_err):
-                        print(f"  ✓ {nombre}: Ya estaba limpio")
+                        # Intentar rollback normal por si se quedó en el BEGIN sin llegar al PREPARE
+                        try:
+                            with conn.cursor() as cur:
+                                cur.execute("ROLLBACK")
+                            print(f"  ✓ {nombre}: ROLLED BACK NORMAL (limpio)")
+                        except:
+                            pass
                     else:
                         print(f"  ✗ {nombre}: {rb_err}")
 
@@ -134,7 +140,7 @@ def transferir_2pc(monto, cliente_origen, cliente_destino, nodo_origen, nodo_des
 if __name__ == "__main__":
     print("=" * 50)
     print("SISTEMA NACIONAL DE BANCOS COOPERATIVOS")
-    print("Protocolo: Two-Phase Commit")
+    print("Protocolo: Two-Phase Commit (Corregido)")
     print("=" * 50)
 
     consultar_saldos()

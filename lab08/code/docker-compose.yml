@@ -7,7 +7,7 @@ services:
       POSTGRES_PASSWORD: banco123
       POSTGRES_DB: banco_arequipa
     ports:
-      - "5431:5432"
+      - "5432:5432"
     networks:
       - red-bancaria
     command: postgres -c max_prepared_transactions=10
