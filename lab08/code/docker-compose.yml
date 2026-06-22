@@ -11,6 +11,8 @@ services:
     networks:
       - red-bancaria
     command: postgres -c max_prepared_transactions=10
+    volumes:
+      - ./sql-scripts/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql:ro
 
   pg-cusco:
     image: postgres:16
@@ -24,6 +26,8 @@ services:
     networks:
       - red-bancaria
     command: postgres -c max_prepared_transactions=10
+    volumes:
+      - ./sql-scripts/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql:ro
 
   pg-trujillo:
     image: postgres:16
@@ -37,6 +41,8 @@ services:
     networks:
       - red-bancaria
     command: postgres -c max_prepared_transactions=10
+    volumes:
+      - ./sql-scripts/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql:ro
 
 networks:
   red-bancaria:
