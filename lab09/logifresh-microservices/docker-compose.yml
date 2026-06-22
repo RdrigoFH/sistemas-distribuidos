@@ -1,0 +1,51 @@
+version: '3.8'
+
+services:
+  inventario:
+    build: ./inventario
+    ports:
+      - "3001:3001"
+    networks:
+      - logifresh-net
+
+  facturacion:
+    build: ./facturacion
+    ports:
+      - "3002:3002"
+    networks:
+      - logifresh-net
+
+  transporte:
+    build: ./transporte
+    ports:
+      - "3003:3003"
+    networks:
+      - logifresh-net
+
+  notificaciones:
+    build: ./notificaciones
+    ports:
+      - "3004:3004"
+    networks:
+      - logifresh-net
+
+  pedidos:
+    build: ./pedidos
+    ports:
+      - "3000:3000"
+    environment:
+      - INVENTARIO_URL=http://inventario:3001
+      - FACTURACION_URL=http://facturacion:3002
+      - TRANSPORTE_URL=http://transporte:3003
+      - NOTIFICACIONES_URL=http://notificaciones:3004
+    depends_on:
+      - inventario
+      - facturacion
+      - transporte
+      - notificaciones
+    networks:
+      - logifresh-net
+
+networks:
+  logifresh-net:
+    driver: bridge
